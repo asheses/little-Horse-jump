@@ -1,0 +1,3096 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小马跳跃游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            gap: 20px;
+        }
+
+        #mainContainer {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        #gameContainer {
+            text-align: center;
+            background: #000;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        #gameCanvas {
+            border: 2px solid #333;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #228B22 100%);
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        #score {
+            color: white;
+            font-size: 24px;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        #instructions {
+            color: #ccc;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .game-over {
+            color: #ff4444;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        #highScore {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 2px solid #FFD700;
+        }
+
+        #playerInfo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00FF00;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 2px solid #00FF00;
+        }
+
+        .offline {
+            color: #FF4444 !important;
+            border-color: #FF4444 !important;
+        }
+
+        #leaderboardSidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            color: white;
+            font-family: 'Courier New', monospace;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        #leaderboardSidebar h3 {
+            color: #FFD700;
+            text-align: center;
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            border-bottom: 2px solid #FFD700;
+            padding-bottom: 10px;
+        }
+
+        .leaderboard-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-entry:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .leaderboard-entry.rank-1 {
+            border-left-color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        .leaderboard-entry.rank-2 {
+            border-left-color: #C0C0C0;
+            background: rgba(192, 192, 192, 0.2);
+        }
+
+        .leaderboard-entry.rank-3 {
+            border-left-color: #CD7F32;
+            background: rgba(205, 127, 50, 0.2);
+        }
+
+        .rank-number {
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 30px;
+        }
+
+        .rank-1 .rank-number { color: #FFD700; }
+        .rank-2 .rank-number { color: #C0C0C0; }
+        .rank-3 .rank-number { color: #CD7F32; }
+
+        .player-name {
+            flex: 1;
+            margin: 0 10px;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .player-score {
+            font-weight: bold;
+            color: #00FF00;
+            font-size: 16px;
+        }
+
+        .medal {
+            font-size: 18px;
+            margin-right: 5px;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .connection-status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .connection-status.online {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00FF00;
+            border: 1px solid #00FF00;
+        }
+
+        .connection-status.offline {
+            background: rgba(255, 68, 68, 0.2);
+            color: #FF4444;
+            border: 1px solid #FF4444;
+        }
+
+        .last-updated {
+            text-align: center;
+            font-size: 10px;
+            color: #888;
+            margin-top: 10px;
+        }
+
+        /* 其他玩家游戏画面样式 */
+        #otherPlayersContainer {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #otherPlayersContainer h3 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #otherPlayersDisplay {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .player-game-view {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-width: 300px;
+            max-width: 400px;
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .player-name {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 16px;
+        }
+
+        .player-score {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 14px;
+        }
+
+        .mini-game-canvas {
+            width: 100%;
+            height: 150px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #228B22 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-stats {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6c757d;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .no-players {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .player-status {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+
+        .status-online {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-offline {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* 可点击的排行榜条目样式 */
+        .clickable-player {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .clickable-player:hover {
+            background-color: #e3f2fd;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .view-game-hint {
+            margin-left: 5px;
+            font-size: 12px;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .clickable-player:hover .view-game-hint {
+            opacity: 1;
+        }
+
+        /* 选中的玩家样式 */
+        .selected-player {
+            background-color: #e8f5e8;
+            border-left: 4px solid #28a745;
+        }
+
+        /* 单个玩家游戏画面显示 */
+        .single-player-view {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .single-player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .close-view-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .close-view-btn:hover {
+            background-color: #c82333;
+        }
+
+        .large-game-canvas {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #228B22 100%);
+        }
+
+        /* 平滑控制面板样式 */
+        .smoothing-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 123, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid rgba(0, 123, 255, 0.3);
+        }
+
+        .smoothing-controls label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 0;
+        }
+
+        .smoothing-controls input[type="range"] {
+            width: 100px;
+            height: 4px;
+            background: #ddd;
+            outline: none;
+            border-radius: 2px;
+        }
+
+        .smoothing-controls input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .smoothing-controls input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .smoothing-controls span {
+            font-size: 12px;
+            font-weight: bold;
+            color: #007bff;
+            min-width: 30px;
+        }
+
+        #toggleSmoothingBtn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #toggleSmoothingBtn:hover {
+            background: #218838;
+        }
+
+        #toggleSmoothingBtn.disabled {
+            background: #dc3545;
+        }
+
+        #toggleSmoothingBtn.disabled:hover {
+            background: #c82333;
+        }
+
+        /* 清除数据按钮样式 */
+        #clearDataContainer {
+            text-align: center;
+            margin: 30px auto;
+            padding: 20px;
+            max-width: 1200px;
+        }
+
+        #clearAllDataBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #clearAllDataBtn:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        #clearAllDataBtn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mainContainer">
+        <div id="gameContainer">
+            <div id="playerInfo">玩家: 连接中... | 状态: 离线</div>
+            <div id="highScore">最高得分: 0</div>
+            <div id="score">得分: 0</div>
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
+            <div id="instructions">按空格键跳跃 | 按R键重新开始 | 点击右侧玩家姓名可以实时观看其他玩家游戏画面</div>
+        </div>
+
+        <div id="leaderboardSidebar">
+            <h3>🏆 全球排行榜</h3>
+            <div id="connectionStatus" class="connection-status offline">
+                📡 离线模式
+            </div>
+            <div id="leaderboardContent">
+                <div class="no-data">暂无排行榜数据</div>
+            </div>
+            <div id="lastUpdated" class="last-updated">
+                等待连接...
+            </div>
+        </div>
+    </div>
+
+    <!-- 单个玩家游戏画面显示区域 -->
+    <div id="singlePlayerViewContainer" style="display: none;">
+        <div class="single-player-view">
+            <div class="single-player-header">
+                <div>
+                    <h3 id="viewingPlayerName">🎮 观看玩家游戏画面</h3>
+                    <div id="viewingPlayerStats" class="player-stats"></div>
+                </div>
+                <button class="close-view-btn" onclick="closeSinglePlayerView()">关闭观看</button>
+            </div>
+            <canvas id="singlePlayerCanvas" class="large-game-canvas" width="800" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- 清除数据按钮 -->
+    <div id="clearDataContainer">
+        <button id="clearAllDataBtn" onclick="clearAllData()">🗑️ 清除所有数据</button>
+    </div>
+
+    <!-- MultiSYNQ CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@multisynq/client@1.0.4/bundled/multisynq-client.min.js"></script>
+
+    <script>
+        // MultiSYNQ配置
+        const MULTISYNQ_API_KEY = '2zzvzIyyiEaYwTZQ6AjAvZzxvlsDOYzW2XSNgYbgjX';
+        const APP_ID = 'com.example.black_jack';
+
+        // 生成随机玩家名字
+        const playerNames = [
+            '跳跃大师', '飞行侠', '闪电小子', '超级玛丽', '忍者龟',
+            '火箭人', '风之子', '雷神', '光速侠', '钢铁侠',
+            '蜘蛛侠', '绿巨人', '美队', '黑寡妇', '鹰眼',
+            '奇异博士', '星爵', '火箭浣熊', '格鲁特', '卡魔拉'
+        ];
+        const currentPlayerName = playerNames[Math.floor(Math.random() * playerNames.length)] + Math.floor(Math.random() * 1000);
+
+        // MultiSYNQ相关变量
+        let multisynqSession = null;
+        let gameModel = null;
+        let isConnected = false;
+
+        // 游戏画布和上下文
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const playerInfoElement = document.getElementById('playerInfo');
+        const leaderboardContentElement = document.getElementById('leaderboardContent');
+        const connectionStatusElement = document.getElementById('connectionStatus');
+        const lastUpdatedElement = document.getElementById('lastUpdated');
+
+        // 更新玩家信息显示
+        function updatePlayerInfoDisplay() {
+            const status = isConnected ? '在线' : '离线';
+            playerInfoElement.textContent = `玩家: ${currentPlayerName} | 状态: ${status}`;
+
+            if (isConnected) {
+                playerInfoElement.classList.remove('offline');
+            } else {
+                playerInfoElement.classList.add('offline');
+            }
+
+            // 更新连接状态显示
+            updateConnectionStatusDisplay();
+        }
+
+        // 更新连接状态显示
+        function updateConnectionStatusDisplay() {
+            if (isConnected) {
+                connectionStatusElement.textContent = '🌐 在线模式';
+                connectionStatusElement.className = 'connection-status online';
+            } else {
+                connectionStatusElement.textContent = '📡 离线模式';
+                connectionStatusElement.className = 'connection-status offline';
+            }
+        }
+
+        // 清理本地存储（如果存在）
+        function clearLocalStorage() {
+            // 清除可能存在的本地排行榜数据
+            localStorage.removeItem('jumpGameLeaderboard');
+            localStorage.removeItem('localLeaderboard');
+            console.log("Cleared any existing local leaderboard data");
+        }
+
+        // 更新排行榜显示
+        function updateLeaderboardDisplay(leaderboard = []) {
+            if (!leaderboard || leaderboard.length === 0) {
+                leaderboardContentElement.innerHTML = '<div class="no-data">暂无排行榜数据</div>';
+                if (!lastUpdatedElement.textContent.includes('本地数据')) {
+                    lastUpdatedElement.textContent = '等待数据...';
+                }
+                return;
+            }
+
+            let html = '';
+            leaderboard.forEach((entry, index) => {
+                const rank = index + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+                const rankClass = rank <= 3 ? `rank-${rank}` : '';
+                const isCurrentPlayer = entry.playerName === currentPlayerName;
+                const clickableClass = !isCurrentPlayer ? 'clickable-player' : '';
+
+                html += `
+                    <div class="leaderboard-entry ${rankClass} ${clickableClass}"
+                         ${!isCurrentPlayer ? `onclick="togglePlayerGameView('${entry.playerName}')"` : ''}>
+                        <div class="rank-number">
+                            <span class="medal">${medal}</span>${rank}
+                        </div>
+                        <div class="player-name" title="${entry.playerName}">
+                            ${entry.playerName}
+                            ${!isCurrentPlayer ? '<span class="view-game-hint">👁️</span>' : ''}
+                        </div>
+                        <div class="player-score">
+                            ${entry.score.toLocaleString()}
+                        </div>
+                    </div>
+                `;
+            });
+
+            leaderboardContentElement.innerHTML = html;
+
+            console.log("Leaderboard display updated with", leaderboard.length, "entries");
+        }
+
+        // 游戏状态
+        let gameRunning = true;
+        let score = 0;
+        let highScore = 0;
+        let gameSpeed = 3; // 加快1.5倍 (2.2 * 1.5)
+        let frameCount = 0;
+
+        // 实时游戏状态上传控制
+        let lastGameStateUpload = 0;
+        const GAME_STATE_UPLOAD_INTERVAL = 50; // 每500毫秒上传一次游戏状态 (2fps) - 降低频率便于调试
+        let gameStateUploadEnabled = true;
+        let lastGameState = null; // 存储上次的游戏状态，用于比较变化
+        let gameStateUploadErrors = 0; // 上传错误计数
+        const MAX_UPLOAD_ERRORS = 5; // 最大错误次数
+        let forceUploadForTesting = true; // 强制上传用于测试
+
+        // 单个玩家观看功能
+        let currentViewingPlayer = null; // 当前正在观看的玩家
+        let allPlayersStates = new Map(); // 存储所有玩家的游戏状态
+
+        // View Smoothing 系统
+        let smoothedStates = new Map(); // 存储平滑后的游戏状态
+        let previousStates = new Map(); // 存储上一帧的游戏状态
+        let smoothingAnimationId = null; // 平滑动画ID
+        let smoothingFactor = 0.15; // 平滑因子 (0-1, 越小越平滑)
+        let smoothingEnabled = true; // 平滑开关
+
+        // MultiSYNQ Model类 - 处理共享游戏状态
+        class GameModel extends Multisynq.Model {
+            init() {
+                super.init();
+                // 初始化共享排行榜数据 - 这将在所有客户端之间共享
+                if (!this.leaderboard) {
+                    this.leaderboard = [];
+                }
+
+                // 初始化实时游戏状态数据存储
+                if (!this.gameStates) {
+                    this.gameStates = new Map(); // 存储每个玩家的游戏状态
+                }
+
+                // 订阅事件
+                this.subscribe(this.sessionId, "score-submit", this.handleScoreSubmit);
+                this.subscribe(this.sessionId, "request-leaderboard", this.sendLeaderboard);
+                this.subscribe(this.sessionId, "game-state-update", this.handleGameStateUpdate);
+                this.subscribe(this.sessionId, "request-game-states", this.sendGameStates);
+                this.subscribe(this.sessionId, "clear-all-data", this.handleClearAllData);
+
+                console.log("GameModel initialized. Current leaderboard:", this.leaderboard);
+
+                // 立即广播当前排行榜状态
+                setTimeout(() => {
+                    if (this.sendLeaderboard) {
+                        this.sendLeaderboard();
+                    }
+                }, 1000);
+
+                // 定期广播排行榜更新
+                setTimeout(() => {
+                    if (this.periodicBroadcast) {
+                        this.periodicBroadcast();
+                    }
+                }, 5000);
+            }
+
+            handleScoreSubmit(data) {
+                console.log("Model received score submission:", data);
+                const { playerName, score } = data;
+
+                // 确保leaderboard存在
+                if (!this.leaderboard) {
+                    this.leaderboard = [];
+                }
+
+                // 更新排行榜
+                const existingIndex = this.leaderboard.findIndex(entry => entry.playerName === playerName);
+                let updated = false;
+
+                if (existingIndex >= 0) {
+                    // 只有当新分数更高时才更新
+                    if (score > this.leaderboard[existingIndex].score) {
+                        this.leaderboard[existingIndex] = {
+                            playerName,
+                            score,
+                            timestamp: Date.now(),
+                            sessionId: this.sessionId
+                        };
+                        console.log(`Updated existing player ${playerName}: ${this.leaderboard[existingIndex].score} → ${score}`);
+                        updated = true;
+                    } else {
+                        console.log(`Score ${score} not higher than existing ${this.leaderboard[existingIndex].score} for ${playerName}`);
+                    }
+                } else {
+                    this.leaderboard.push({
+                        playerName,
+                        score,
+                        timestamp: Date.now(),
+                        sessionId: this.sessionId
+                    });
+                    console.log(`Added new player ${playerName}: ${score}`);
+                    updated = true;
+                }
+
+                if (updated) {
+                    // 按分数排序，不限制数量
+                    this.leaderboard.sort((a, b) => b.score - a.score);
+
+                    console.log("Updated leaderboard:", this.leaderboard);
+
+                    // 立即广播更新
+                    this.sendLeaderboard();
+                }
+            }
+
+            sendLeaderboard() {
+                console.log("Broadcasting leaderboard to all clients:", this.leaderboard);
+                this.publish(this.sessionId, "leaderboard-update", {
+                    leaderboard: this.leaderboard || [],
+                    timestamp: Date.now(),
+                    source: "model"
+                });
+            }
+
+            periodicBroadcast() {
+                // 定期广播当前状态
+                this.sendLeaderboard();
+                this.cleanupGameStates(); // 清理过期的游戏状态
+                // 每30秒广播一次
+                setTimeout(() => {
+                    if (this.periodicBroadcast) {
+                        this.periodicBroadcast();
+                    }
+                }, 30000);
+            }
+
+            handleScoreUpdate(data) {
+                const { playerName, score, timestamp } = data;
+
+                // 更新排行榜
+                const existingIndex = this.leaderboard.findIndex(entry => entry.playerName === playerName);
+                if (existingIndex >= 0) {
+                    // 只有当新分数更高时才更新
+                    if (score > this.leaderboard[existingIndex].score) {
+                        this.leaderboard[existingIndex] = { playerName, score, timestamp };
+                    }
+                } else {
+                    this.leaderboard.push({ playerName, score, timestamp });
+                }
+
+                // 按分数排序，不限制数量
+                this.leaderboard.sort((a, b) => b.score - a.score);
+
+                // 通知所有客户端更新排行榜
+                this.publish(this.sessionId, "leaderboard-updated", {
+                    leaderboard: this.leaderboard,
+                    timestamp: this.now()
+                });
+
+                console.log("Score updated for", playerName, ":", score);
+            }
+
+            handlePlayerJoin(data) {
+                const { playerName, timestamp } = data;
+                this.currentPlayers.set(playerName, { joinTime: timestamp, lastSeen: timestamp });
+
+                this.publish(this.sessionId, "player-list-updated", {
+                    players: Array.from(this.currentPlayers.keys()),
+                    timestamp: this.now()
+                });
+
+                console.log("Player joined:", playerName);
+            }
+
+            handlePlayerLeave(data) {
+                const { playerName } = data;
+                this.currentPlayers.delete(playerName);
+
+                this.publish(this.sessionId, "player-list-updated", {
+                    players: Array.from(this.currentPlayers.keys()),
+                    timestamp: this.now()
+                });
+
+                console.log("Player left:", playerName);
+            }
+
+            // 处理游戏状态更新
+            handleGameStateUpdate(data) {
+                console.log("Model received game state update:", data);
+                const { playerName, gameState } = data;
+
+                // 确保gameStates存在
+                if (!this.gameStates) {
+                    this.gameStates = new Map();
+                }
+
+                // 更新玩家的游戏状态
+                this.gameStates.set(playerName, {
+                    ...gameState,
+                    timestamp: Date.now(),
+                    sessionId: this.sessionId
+                });
+
+                console.log(`Updated game state for ${playerName}:`, gameState);
+
+                // 广播游戏状态更新给所有客户端
+                this.sendGameStates();
+            }
+
+            // 发送所有游戏状态给客户端
+            sendGameStates() {
+                if (!this.gameStates) {
+                    this.gameStates = new Map();
+                }
+
+                // 将Map转换为对象以便传输
+                const gameStatesObject = {};
+                this.gameStates.forEach((state, playerName) => {
+                    gameStatesObject[playerName] = state;
+                });
+
+                console.log("Broadcasting game states to all clients:", gameStatesObject);
+                this.publish(this.sessionId, "game-states-update", {
+                    gameStates: gameStatesObject,
+                    timestamp: Date.now(),
+                    source: "model"
+                });
+            }
+
+            // 清理过期的游戏状态（超过30秒没有更新的玩家）
+            cleanupGameStates() {
+                if (!this.gameStates) return;
+
+                const now = Date.now();
+                const TIMEOUT = 30000; // 30秒超时
+
+                this.gameStates.forEach((state, playerName) => {
+                    if (now - state.timestamp > TIMEOUT) {
+                        console.log(`Removing expired game state for ${playerName}`);
+                        this.gameStates.delete(playerName);
+                    }
+                });
+
+                // 如果有状态被清理，广播更新
+                this.sendGameStates();
+            }
+
+            // 处理清除所有数据请求
+            handleClearAllData(data) {
+                console.log("🗑️ Model received clear all data request:", data);
+                const { requestedBy, timestamp } = data;
+
+                try {
+                    // 清除排行榜数据
+                    this.leaderboard = [];
+                    console.log("✅ Leaderboard cleared");
+
+                    // 清除所有游戏状态数据
+                    if (this.gameStates) {
+                        this.gameStates.clear();
+                    }
+                    console.log("✅ Game states cleared");
+
+                    // 清除玩家列表
+                    if (this.currentPlayers) {
+                        this.currentPlayers.clear();
+                    }
+                    console.log("✅ Player list cleared");
+
+                    // 广播清除完成事件
+                    this.publish(this.sessionId, "data-cleared", {
+                        clearedBy: requestedBy,
+                        timestamp: Date.now(),
+                        message: "所有MultiSYNQ数据已清除"
+                    });
+
+                    // 广播空的排行榜和游戏状态
+                    this.sendLeaderboard();
+                    this.sendGameStates();
+
+                    console.log(`🎉 All MultiSYNQ data cleared by ${requestedBy}`);
+
+                } catch (error) {
+                    console.error("❌ Error clearing MultiSYNQ data:", error);
+
+                    // 广播错误事件
+                    this.publish(this.sessionId, "clear-data-error", {
+                        error: error.message,
+                        requestedBy: requestedBy,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+        }
+
+        // 注册Model类
+        GameModel.register("GameModel");
+
+        // MultiSYNQ View类 - 处理本地UI更新
+        class GameView extends Multisynq.View {
+            constructor(model) {
+                super(model);
+                this.model = model;
+                this.subscribe(this.model.sessionId, "leaderboard-update", this.onLeaderboardUpdate);
+                this.subscribe(this.model.sessionId, "game-states-update", this.onGameStatesUpdate);
+                this.subscribe(this.model.sessionId, "data-cleared", this.onDataCleared);
+                this.subscribe(this.model.sessionId, "clear-data-error", this.onClearDataError);
+
+                // 存储其他玩家的游戏状态
+                this.otherPlayersStates = new Map();
+
+                console.log("GameView initialized");
+
+                // 连接后立即请求当前排行榜和游戏状态
+                setTimeout(() => {
+                    if (this.requestCurrentLeaderboard) {
+                        this.requestCurrentLeaderboard();
+                    }
+                    if (this.requestCurrentGameStates) {
+                        this.requestCurrentGameStates();
+                    }
+                }, 500);
+            }
+
+            onLeaderboardUpdate(data) {
+                console.log("View received leaderboard update:", data);
+                if (data && data.leaderboard) {
+                    // 更新全局排行榜显示
+                    if (typeof updateLeaderboardDisplay === 'function') {
+                        updateLeaderboardDisplay(data.leaderboard);
+
+                        // 更新最后更新时间
+                        if (typeof lastUpdatedElement !== 'undefined' && lastUpdatedElement) {
+                            const now = new Date();
+                            lastUpdatedElement.textContent = `最后更新: ${now.toLocaleTimeString()} (MultiSYNQ)`;
+                        }
+                    }
+
+                    // 更新本地最高分显示
+                    if (data.leaderboard.length > 0 && typeof highScore !== 'undefined') {
+                        const globalHighScore = data.leaderboard[0].score;
+                        if (globalHighScore > highScore) {
+                            highScore = globalHighScore;
+                            if (typeof updateHighScoreDisplay === 'function') {
+                                updateHighScoreDisplay();
+                            }
+                        }
+                    }
+                }
+            }
+
+            requestCurrentLeaderboard() {
+                console.log("Requesting current leaderboard from model");
+                try {
+                    this.publish(this.model.sessionId, "request-leaderboard", {
+                        timestamp: Date.now()
+                    });
+                } catch (error) {
+                    console.error("Failed to request leaderboard:", error);
+                }
+            }
+
+            // 处理游戏状态更新
+            onGameStatesUpdate(data) {
+                console.log("View received game states update:", data);
+                if (data && data.gameStates) {
+                    // 更新所有玩家的游戏状态
+                    allPlayersStates.clear();
+                    this.otherPlayersStates.clear();
+
+                    Object.entries(data.gameStates).forEach(([playerName, gameState]) => {
+                        allPlayersStates.set(playerName, gameState);
+                        // 不存储自己的游戏状态到otherPlayersStates
+                        if (playerName !== currentPlayerName) {
+                            this.otherPlayersStates.set(playerName, gameState);
+                        }
+                    });
+
+                    console.log(`Updated game states for ${this.otherPlayersStates.size} other players`);
+
+                    // 如果正在观看某个玩家，更新其画面
+                    if (currentViewingPlayer && allPlayersStates.has(currentViewingPlayer)) {
+                        updateSinglePlayerView(currentViewingPlayer, allPlayersStates.get(currentViewingPlayer));
+                    }
+                }
+            }
+
+            // 请求当前游戏状态
+            requestCurrentGameStates() {
+                console.log("Requesting current game states from model");
+                try {
+                    this.publish(this.model.sessionId, "request-game-states", {
+                        timestamp: Date.now()
+                    });
+                } catch (error) {
+                    console.error("Failed to request game states:", error);
+                }
+            }
+
+            // 分数提交方法
+            submitScore(playerName, score) {
+                console.log(`Submitting score to MultiSYNQ: ${playerName} - ${score}`);
+                try {
+                    this.publish(this.model.sessionId, "score-submit", {
+                        playerName: playerName,
+                        score: score,
+                        timestamp: Date.now()
+                    });
+                    console.log("Score submitted successfully to MultiSYNQ");
+                } catch (error) {
+                    console.error("Failed to submit score to MultiSYNQ:", error);
+                    throw error;
+                }
+            }
+
+            // 游戏状态提交方法
+            submitGameState(playerName, gameState) {
+                console.log(`Submitting game state to MultiSYNQ: ${playerName}`, gameState);
+                try {
+                    this.publish(this.model.sessionId, "game-state-update", {
+                        playerName: playerName,
+                        gameState: gameState,
+                        timestamp: Date.now()
+                    });
+                } catch (error) {
+                    console.error("Failed to submit game state to MultiSYNQ:", error);
+                    throw error;
+                }
+            }
+
+            // 获取其他玩家的游戏状态
+            getOtherPlayersStates() {
+                return this.otherPlayersStates;
+            }
+
+            // 处理数据清除完成事件
+            onDataCleared(data) {
+                console.log("📢 Data cleared notification:", data);
+                const { clearedBy, message } = data;
+
+                // 显示通知消息
+                alert(`🎉 ${message}\n\n操作者：${clearedBy}\n\n页面将自动刷新以显示最新状态。`);
+
+                // 自动刷新页面
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+
+            // 处理清除数据错误事件
+            onClearDataError(data) {
+                console.error("❌ Clear data error:", data);
+                const { error, requestedBy } = data;
+
+                alert(`❌ 清除数据失败！\n\n错误信息：${error}\n操作者：${requestedBy}`);
+            }
+        }
+
+        // View类不需要注册，只有Model类需要注册
+
+        // 重力和跳跃物理参数
+        const BASE_GRAVITY = 0.6;
+        const JUMP_FORCE = -12;
+        const GROUND_Y = canvas.height - 60;
+        const BASE_GAME_SPEED = 3; // 基础游戏速度
+
+        // 玩家角色对象
+        const player = {
+            x: 100,
+            y: GROUND_Y,
+            width: 32,
+            height: 32,
+            velocityY: 0,
+            isJumping: false,
+            color: '#FF6B6B',
+            image: null,
+            imageLoaded: false
+        };
+
+        // 金币图片对象
+        const coinImage = {
+            image: null,
+            imageLoaded: false
+        };
+
+        // 初始化MultiSYNQ连接
+        async function initMultiSYNQ() {
+            try {
+                console.log("Connecting to MultiSYNQ...");
+                multisynqSession = await Multisynq.Session.join({
+                    appId: APP_ID,
+                    apiKey: MULTISYNQ_API_KEY,
+                    name: "jump-game-global-leaderboard", // 固定会话名，所有玩家共享
+                    password: "jump-game-session", // 共享密码，所有玩家使用相同密码进入同一会话
+                    model: GameModel,
+                    view: GameView,
+                    tps: 20 // 每秒20次同步
+                });
+
+                gameModel = multisynqSession.view.model;
+                isConnected = true;
+
+                console.log("🎉 Connected to MultiSYNQ successfully!");
+                console.log("🎮 Player name:", currentPlayerName);
+                console.log("🔗 Session ID:", multisynqSession.id);
+                console.log("📡 Session details:", {
+                    id: multisynqSession.id,
+                    name: "jump-game-global-leaderboard",
+                    appId: APP_ID,
+                    connected: isConnected
+                });
+
+                // 更新UI显示
+                updatePlayerInfoDisplay();
+
+                // 连接成功后，清空本地显示，等待MultiSYNQ数据
+                console.log("Connected to MultiSYNQ, waiting for leaderboard data...");
+                updateLeaderboardDisplay([]);
+                if (lastUpdatedElement) {
+                    lastUpdatedElement.textContent = '已连接，正在加载排行榜...';
+                }
+
+                // 请求当前排行榜状态
+                setTimeout(() => {
+                    if (multisynqSession && multisynqSession.view) {
+                        console.log("Requesting current leaderboard from MultiSYNQ...");
+                        multisynqSession.view.requestCurrentLeaderboard();
+
+                        // 如果模型中已有数据，立即显示
+                        if (multisynqSession.view.model && multisynqSession.view.model.leaderboard) {
+                            const currentBoard = multisynqSession.view.model.leaderboard;
+                            console.log("Found existing leaderboard in model:", currentBoard);
+                            updateLeaderboardDisplay(currentBoard);
+                            if (lastUpdatedElement) {
+                                lastUpdatedElement.textContent = `已加载 ${currentBoard.length} 名玩家`;
+                            }
+                        }
+                    }
+                }, 1000);
+
+                // 暂时不发送玩家加入通知，避免realm错误
+                console.log("MultiSYNQ session ready for score updates");
+
+                // 页面关闭时的清理（暂时简化）
+                window.addEventListener('beforeunload', () => {
+                    console.log("Page unloading, cleaning up MultiSYNQ session");
+                });
+
+            } catch (error) {
+                console.error("Failed to connect to MultiSYNQ:", error);
+                isConnected = false;
+                // 更新UI显示
+                updatePlayerInfoDisplay();
+                // 显示离线状态 - 不显示任何排行榜数据
+                showEmptyLeaderboard();
+                if (lastUpdatedElement) {
+                    lastUpdatedElement.textContent = '连接失败 - 无法访问排行榜';
+                }
+                // 即使连接失败，游戏仍然可以单机运行
+            }
+        }
+
+        // 上传分数到MultiSYNQ（仅使用MultiSYNQ存储）
+        function uploadScoreToMultiSYNQ(playerName, score) {
+            console.log(`Uploading score to MultiSYNQ: ${playerName} - ${score}`);
+
+            if (isConnected && multisynqSession && multisynqSession.view) {
+                try {
+                    multisynqSession.view.submitScore(playerName, score);
+                    console.log(`Score successfully submitted to MultiSYNQ: ${playerName} - ${score}`);
+                } catch (error) {
+                    console.error("Failed to submit score to MultiSYNQ:", error);
+                    // 显示错误信息给用户
+                    if (typeof lastUpdatedElement !== 'undefined' && lastUpdatedElement) {
+                        lastUpdatedElement.textContent = '分数上传失败 - 请检查连接';
+                    }
+                }
+            } else {
+                console.log("MultiSYNQ not connected - score not saved");
+                // 显示未连接状态
+                if (typeof lastUpdatedElement !== 'undefined' && lastUpdatedElement) {
+                    lastUpdatedElement.textContent = '未连接到MultiSYNQ - 分数未保存';
+                }
+
+                // 可选：显示提示信息
+                if (typeof updateLeaderboardDisplay === 'function') {
+                    updateLeaderboardDisplay([]);
+                    if (typeof leaderboardContentElement !== 'undefined' && leaderboardContentElement) {
+                        leaderboardContentElement.innerHTML = '<div class="no-data">请连接到MultiSYNQ以保存和查看排行榜</div>';
+                    }
+                }
+            }
+        }
+
+        // 收集当前游戏状态
+        function collectGameState() {
+            return {
+                // 玩家状态
+                player: {
+                    x: player.x,
+                    y: player.y,
+                    width: player.width,
+                    height: player.height,
+                    velocityY: player.velocityY,
+                    isJumping: player.isJumping,
+                    color: player.color
+                },
+                // 障碍物状态（只发送可见的障碍物）
+                obstacles: obstacles.filter(obstacle => obstacle.x > -obstacle.width && obstacle.x < canvas.width + 100).map(obstacle => ({
+                    x: obstacle.x,
+                    y: obstacle.y,
+                    width: obstacle.width,
+                    height: obstacle.height,
+                    type: obstacle.type
+                })),
+                // 道具状态
+                powerups: powerups.filter(powerup => powerup.x > -powerup.width && powerup.x < canvas.width + 100).map(powerup => ({
+                    x: powerup.x,
+                    y: powerup.y,
+                    width: powerup.width,
+                    height: powerup.height,
+                    type: powerup.type
+                })),
+                // 游戏状态
+                score: score,
+                gameSpeed: gameSpeed,
+                frameCount: frameCount,
+                gameRunning: gameRunning,
+                // 无敌状态
+                invincible: invincible,
+                invincibleTime: invincibleTime,
+                // 地面滚动偏移
+                groundOffset: groundOffset % 40 // 只发送相对偏移
+            };
+        }
+
+        // 检查游戏状态是否有显著变化
+        function hasSignificantGameStateChange(newState, oldState) {
+            if (!oldState) return true; // 第一次上传
+
+            // 检查玩家位置变化（超过1像素）
+            if (Math.abs(newState.player.x - oldState.player.x) > 1 ||
+                Math.abs(newState.player.y - oldState.player.y) > 1) {
+                return true;
+            }
+
+            // 检查玩家跳跃状态变化
+            if (newState.player.isJumping !== oldState.player.isJumping) {
+                return true;
+            }
+
+            // 检查分数变化
+            if (newState.score !== oldState.score) {
+                return true;
+            }
+
+            // 检查游戏速度变化
+            if (Math.abs(newState.gameSpeed - oldState.gameSpeed) > 0.01) {
+                return true;
+            }
+
+            // 检查障碍物数量变化
+            if (newState.obstacles.length !== oldState.obstacles.length) {
+                return true;
+            }
+
+            // 检查道具数量变化
+            if (newState.powerups.length !== oldState.powerups.length) {
+                return true;
+            }
+
+            // 检查无敌状态变化
+            if (newState.invincible !== oldState.invincible) {
+                return true;
+            }
+
+            // 检查游戏运行状态变化
+            if (newState.gameRunning !== oldState.gameRunning) {
+                return true;
+            }
+
+            // 定期强制上传（每3秒）
+            const now = Date.now();
+            if (now - lastGameStateUpload > 3000) {
+                return true;
+            }
+
+            return false; // 没有显著变化
+        }
+
+        // 压缩游戏状态数据
+        function compressGameState(gameState) {
+            return {
+                // 玩家状态（保留关键信息）
+                p: {
+                    x: Math.round(gameState.player.x),
+                    y: Math.round(gameState.player.y),
+                    vY: Math.round(gameState.player.velocityY * 10) / 10, // 保留一位小数
+                    j: gameState.player.isJumping
+                },
+                // 障碍物（只保留位置和类型）
+                o: gameState.obstacles.map(obs => ({
+                    x: Math.round(obs.x),
+                    y: Math.round(obs.y),
+                    w: obs.width,
+                    h: obs.height,
+                    t: obs.type
+                })),
+                // 道具
+                pu: gameState.powerups.map(pu => ({
+                    x: Math.round(pu.x),
+                    y: Math.round(pu.y),
+                    t: pu.type
+                })),
+                // 游戏状态
+                s: gameState.score,
+                gs: Math.round(gameState.gameSpeed * 100) / 100, // 保留两位小数
+                r: gameState.gameRunning,
+                i: gameState.invincible,
+                go: Math.round(gameState.groundOffset)
+            };
+        }
+
+        // 上传游戏状态到MultiSYNQ
+        function uploadGameStateToMultiSYNQ() {
+            if (!gameStateUploadEnabled || !gameRunning) {
+                return;
+            }
+
+            // 检查错误次数
+            if (gameStateUploadErrors >= MAX_UPLOAD_ERRORS) {
+                console.warn("Too many upload errors, disabling game state upload");
+                gameStateUploadEnabled = false;
+                return;
+            }
+
+            const now = Date.now();
+            if (now - lastGameStateUpload < GAME_STATE_UPLOAD_INTERVAL) {
+                return; // 还没到上传时间
+            }
+
+            if (isConnected && multisynqSession && multisynqSession.view) {
+                try {
+                    const gameState = collectGameState();
+
+                    // 测试期间强制上传所有数据
+                    if (!forceUploadForTesting && !hasSignificantGameStateChange(gameState, lastGameState)) {
+                        return; // 没有显著变化，跳过上传
+                    }
+
+                    // 压缩数据
+                    const compressedState = compressGameState(gameState);
+
+                    // 添加调试信息
+                    if (frameCount % 60 === 0) { // 每秒显示一次
+                        console.log("🔄 Attempting to upload game state...");
+                        console.log("📦 Raw game state:", gameState);
+                        console.log("🗜️ Compressed state:", compressedState);
+                    }
+
+                    multisynqSession.view.submitGameState(currentPlayerName, compressedState);
+                    lastGameStateUpload = now;
+                    lastGameState = gameState; // 保存当前状态
+                    gameStateUploadErrors = 0; // 重置错误计数
+
+                    // 增加调试信息频率
+                    if (frameCount % 300 === 0) { // 每5秒显示一次
+                        console.log(`✅ Game state uploaded for ${currentPlayerName}:`, compressedState);
+                        console.log(`📊 Upload stats: errors=${gameStateUploadErrors}, enabled=${gameStateUploadEnabled}`);
+                        console.log(`🔗 Session ID: ${multisynqSession.id}`);
+                    }
+                } catch (error) {
+                    console.error("❌ Failed to upload game state to MultiSYNQ:", error);
+                    gameStateUploadErrors++;
+
+                    // 如果错误次数过多，暂时禁用上传
+                    if (gameStateUploadErrors >= MAX_UPLOAD_ERRORS) {
+                        gameStateUploadEnabled = false;
+                        console.warn(`🚫 Disabling game state upload due to ${gameStateUploadErrors} errors`);
+                        setTimeout(() => {
+                            gameStateUploadEnabled = true;
+                            gameStateUploadErrors = 0;
+                            console.log("🔄 Re-enabling game state upload");
+                        }, 10000); // 10秒后重新启用
+                    }
+                }
+            } else {
+                // 添加连接状态调试信息
+                if (frameCount % 300 === 0) {
+                    console.log(`🔌 Connection status: connected=${isConnected}, session=${!!multisynqSession}, view=${!!(multisynqSession && multisynqSession.view)}`);
+                    if (multisynqSession) {
+                        console.log(`🔗 Session ID: ${multisynqSession.id}`);
+                    }
+                }
+            }
+        }
+
+        // 重置游戏状态上传
+        function resetGameStateUpload() {
+            lastGameState = null;
+            gameStateUploadErrors = 0;
+            gameStateUploadEnabled = true;
+            console.log("Game state upload reset");
+        }
+
+        // 切换玩家游戏画面观看
+        function togglePlayerGameView(playerName) {
+            console.log(`Toggling view for player: ${playerName}`);
+
+            // 如果已经在观看这个玩家，则关闭观看
+            if (currentViewingPlayer === playerName) {
+                closeSinglePlayerView();
+                return;
+            }
+
+            // 更新排行榜中的选中状态
+            updateLeaderboardSelection(playerName);
+
+            // 显示单个玩家观看界面
+            showSinglePlayerView(playerName);
+        }
+
+        // 显示单个玩家观看界面
+        function showSinglePlayerView(playerName) {
+            currentViewingPlayer = playerName;
+            const container = document.getElementById('singlePlayerViewContainer');
+            const playerNameElement = document.getElementById('viewingPlayerName');
+
+            container.style.display = 'block';
+            playerNameElement.textContent = `🎮 观看 ${playerName} 的游戏画面`;
+
+            // 如果有该玩家的游戏状态，立即更新显示
+            if (allPlayersStates.has(playerName)) {
+                updateSinglePlayerView(playerName, allPlayersStates.get(playerName));
+            }
+
+            console.log(`Now viewing player: ${playerName}`);
+        }
+
+        // 关闭单个玩家观看界面
+        function closeSinglePlayerView() {
+            currentViewingPlayer = null;
+            const container = document.getElementById('singlePlayerViewContainer');
+            container.style.display = 'none';
+
+            // 停止平滑动画
+            stopSmoothingAnimation();
+
+            // 清除平滑状态数据
+            smoothedStates.clear();
+            previousStates.clear();
+
+            // 清除排行榜选中状态
+            updateLeaderboardSelection(null);
+
+            console.log('Closed single player view and stopped smoothing');
+        }
+
+        // 更新排行榜选中状态
+        function updateLeaderboardSelection(selectedPlayer) {
+            const leaderboardEntries = document.querySelectorAll('.leaderboard-entry');
+            leaderboardEntries.forEach(entry => {
+                entry.classList.remove('selected-player');
+                if (selectedPlayer) {
+                    const playerNameElement = entry.querySelector('.player-name');
+                    if (playerNameElement && playerNameElement.textContent.includes(selectedPlayer)) {
+                        entry.classList.add('selected-player');
+                    }
+                }
+            });
+        }
+
+        // 更新单个玩家的游戏画面
+        function updateSinglePlayerView(playerName, gameState) {
+            if (currentViewingPlayer !== playerName) return;
+
+            const canvas = document.getElementById('singlePlayerCanvas');
+            const statsElement = document.getElementById('viewingPlayerStats');
+
+            if (!canvas || !gameState) return;
+
+            // 更新原始游戏状态
+            updatePlayerStateForSmoothing(playerName, gameState);
+
+            // 更新统计信息（使用原始状态）
+            const isOnline = gameState.timestamp && (Date.now() - gameState.timestamp < 10000);
+            statsElement.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 14px;">
+                    <div>🎯 分数: ${gameState.s || 0}</div>
+                    <div>⚡ 速度: ${gameState.gs || 0}</div>
+                    <div>🏃 跳跃: ${gameState.p && gameState.p.j ? '是' : '否'}</div>
+                    <div>🚧 障碍物: ${gameState.o ? gameState.o.length : 0}</div>
+                    <div>💎 道具: ${gameState.pu ? gameState.pu.length : 0}</div>
+                    <div>🛡️ 无敌: ${gameState.i ? '是' : '否'}</div>
+                    <div>🎮 运行: ${gameState.r ? '是' : '否'}</div>
+                    <div>📡 状态: <span style="color: ${isOnline ? '#28a745' : '#dc3545'}">${isOnline ? '在线' : '离线'}</span></div>
+                    <div>🎬 平滑: <span style="color: #007bff">启用</span></div>
+                </div>
+            `;
+
+            // 启动平滑渲染（如果还没有启动）
+            if (!smoothingAnimationId) {
+                startSmoothingAnimation();
+            }
+        }
+
+        // 更新玩家状态用于平滑处理
+        function updatePlayerStateForSmoothing(playerName, newState) {
+            // 保存上一帧状态
+            if (smoothedStates.has(playerName)) {
+                previousStates.set(playerName, JSON.parse(JSON.stringify(smoothedStates.get(playerName))));
+            } else {
+                // 第一次接收状态，直接设置为目标状态
+                previousStates.set(playerName, JSON.parse(JSON.stringify(newState)));
+            }
+
+            // 设置目标状态
+            allPlayersStates.set(playerName, newState);
+
+            // 如果没有平滑状态，初始化为当前状态
+            if (!smoothedStates.has(playerName)) {
+                smoothedStates.set(playerName, JSON.parse(JSON.stringify(newState)));
+            }
+        }
+
+        // 启动平滑动画
+        function startSmoothingAnimation() {
+            function animate() {
+                if (currentViewingPlayer) {
+                    // 更新平滑状态
+                    updateSmoothedState(currentViewingPlayer);
+
+                    // 使用平滑后的状态绘制画面
+                    const smoothedState = smoothedStates.get(currentViewingPlayer);
+                    if (smoothedState) {
+                        drawPlayerGameState('singlePlayerCanvas', smoothedState, 1.0);
+                    }
+                }
+
+                smoothingAnimationId = requestAnimationFrame(animate);
+            }
+
+            smoothingAnimationId = requestAnimationFrame(animate);
+            console.log("View smoothing animation started");
+        }
+
+        // 停止平滑动画
+        function stopSmoothingAnimation() {
+            if (smoothingAnimationId) {
+                cancelAnimationFrame(smoothingAnimationId);
+                smoothingAnimationId = null;
+                console.log("View smoothing animation stopped");
+            }
+        }
+
+        // 更新平滑状态
+        function updateSmoothedState(playerName) {
+            const targetState = allPlayersStates.get(playerName);
+            const currentSmoothed = smoothedStates.get(playerName);
+
+            if (!targetState || !currentSmoothed) return;
+
+            // 创建新的平滑状态
+            const newSmoothed = JSON.parse(JSON.stringify(currentSmoothed));
+
+            // 平滑玩家位置
+            if (targetState.p && currentSmoothed.p) {
+                if (smoothingEnabled) {
+                    newSmoothed.p.x = lerp(currentSmoothed.p.x, targetState.p.x, smoothingFactor);
+                    newSmoothed.p.y = lerp(currentSmoothed.p.y, targetState.p.y, smoothingFactor);
+                    newSmoothed.p.vY = lerp(currentSmoothed.p.vY || 0, targetState.p.vY || 0, smoothingFactor);
+                } else {
+                    // 平滑关闭时直接使用目标值
+                    newSmoothed.p.x = targetState.p.x;
+                    newSmoothed.p.y = targetState.p.y;
+                    newSmoothed.p.vY = targetState.p.vY;
+                }
+
+                // 跳跃状态不需要平滑，直接使用目标值
+                newSmoothed.p.j = targetState.p.j;
+            }
+
+            // 平滑地面偏移
+            if (typeof targetState.go === 'number' && typeof currentSmoothed.go === 'number') {
+                if (smoothingEnabled) {
+                    newSmoothed.go = lerp(currentSmoothed.go, targetState.go, smoothingFactor);
+                } else {
+                    newSmoothed.go = targetState.go;
+                }
+            }
+
+            // 平滑障碍物位置
+            if (targetState.o && currentSmoothed.o) {
+                newSmoothed.o = smoothObstacles(currentSmoothed.o, targetState.o);
+            } else if (targetState.o) {
+                newSmoothed.o = targetState.o; // 新障碍物直接使用目标位置
+            }
+
+            // 平滑道具位置
+            if (targetState.pu && currentSmoothed.pu) {
+                newSmoothed.pu = smoothPowerups(currentSmoothed.pu, targetState.pu);
+            } else if (targetState.pu) {
+                newSmoothed.pu = targetState.pu; // 新道具直接使用目标位置
+            }
+
+            // 其他状态直接使用目标值（不需要平滑）
+            newSmoothed.s = targetState.s; // 分数
+            newSmoothed.gs = targetState.gs; // 游戏速度
+            newSmoothed.i = targetState.i; // 无敌状态
+            newSmoothed.r = targetState.r; // 运行状态
+            newSmoothed.timestamp = targetState.timestamp; // 时间戳
+
+            // 更新平滑状态
+            smoothedStates.set(playerName, newSmoothed);
+        }
+
+        // 线性插值函数
+        function lerp(start, end, factor) {
+            return start + (end - start) * factor;
+        }
+
+        // 平滑障碍物位置
+        function smoothObstacles(currentObstacles, targetObstacles) {
+            const smoothed = [];
+
+            // 对于每个目标障碍物，尝试找到对应的当前障碍物进行平滑
+            targetObstacles.forEach((targetObs, index) => {
+                if (currentObstacles[index] &&
+                    currentObstacles[index].t === targetObs.t &&
+                    Math.abs(currentObstacles[index].x - targetObs.x) < 100) {
+                    // 如果类型相同且位置相近，进行平滑
+                    smoothed.push({
+                        x: smoothingEnabled ? lerp(currentObstacles[index].x, targetObs.x, smoothingFactor) : targetObs.x,
+                        y: targetObs.y, // Y位置通常不变
+                        w: targetObs.w, // 宽度不变
+                        h: targetObs.h, // 高度不变
+                        t: targetObs.t  // 类型不变
+                    });
+                } else {
+                    // 新障碍物或位置差异太大，直接使用目标位置
+                    smoothed.push(targetObs);
+                }
+            });
+
+            return smoothed;
+        }
+
+        // 平滑道具位置
+        function smoothPowerups(currentPowerups, targetPowerups) {
+            const smoothed = [];
+
+            // 对于每个目标道具，尝试找到对应的当前道具进行平滑
+            targetPowerups.forEach((targetPu, index) => {
+                if (currentPowerups[index] &&
+                    Math.abs(currentPowerups[index].x - targetPu.x) < 50) {
+                    // 如果位置相近，进行平滑
+                    smoothed.push({
+                        x: smoothingEnabled ? lerp(currentPowerups[index].x, targetPu.x, smoothingFactor) : targetPu.x,
+                        y: smoothingEnabled ? lerp(currentPowerups[index].y, targetPu.y, smoothingFactor) : targetPu.y
+                    });
+                } else {
+                    // 新道具或位置差异太大，直接使用目标位置
+                    smoothed.push(targetPu);
+                }
+            });
+
+            return smoothed;
+        }
+
+        // 更新平滑因子
+        function updateSmoothingFactor(value) {
+            smoothingFactor = parseFloat(value);
+            document.getElementById('smoothingValue').textContent = value;
+            console.log(`Smoothing factor updated to: ${smoothingFactor}`);
+        }
+
+        // 切换平滑开关
+        function toggleSmoothing() {
+            smoothingEnabled = !smoothingEnabled;
+            const btn = document.getElementById('toggleSmoothingBtn');
+            const slider = document.getElementById('smoothingSlider');
+
+            if (smoothingEnabled) {
+                btn.textContent = '🎬 平滑: 开';
+                btn.classList.remove('disabled');
+                slider.disabled = false;
+                console.log('View smoothing enabled');
+            } else {
+                btn.textContent = '🎬 平滑: 关';
+                btn.classList.add('disabled');
+                slider.disabled = true;
+                console.log('View smoothing disabled');
+            }
+        }
+
+        // 绘制单个玩家的游戏状态
+        function drawPlayerGameState(canvasId, gameState, customScale = null) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            // 清空画布
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // 绘制背景渐变
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.7, '#98FB98');
+            gradient.addColorStop(1, '#228B22');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // 计算缩放比例
+            let scaleX, scaleY;
+            if (customScale !== null) {
+                // 使用自定义缩放（用于大画面显示）
+                scaleX = customScale;
+                scaleY = customScale * (canvasHeight / 400); // 保持比例
+            } else {
+                // 自动计算缩放（用于迷你画面）
+                scaleX = canvasWidth / 800;
+                scaleY = canvasHeight / 400;
+            }
+
+            // 绘制背景云朵
+            drawMiniClouds(ctx, canvasWidth, canvasHeight, scaleX);
+
+            // 绘制地面
+            drawMiniGround(ctx, canvasWidth, canvasHeight, gameState.go || 0, scaleX);
+
+            // 绘制障碍物（在玩家后面）
+            if (gameState.o && gameState.o.length > 0) {
+                gameState.o.forEach(obstacle => {
+                    drawMiniObstacle(ctx, obstacle, scaleX, scaleY);
+                });
+            }
+
+            // 绘制道具
+            if (gameState.pu && gameState.pu.length > 0) {
+                gameState.pu.forEach(powerup => {
+                    drawMiniPowerup(ctx, powerup, scaleX, scaleY);
+                });
+            }
+
+            // 绘制玩家（在最前面）
+            if (gameState.p) {
+                drawMiniPlayer(ctx, gameState.p, scaleX, scaleY);
+            }
+
+            // 绘制UI元素
+            drawMiniUI(ctx, canvasWidth, canvasHeight, gameState);
+        }
+
+
+
+        // 绘制迷你地面
+        function drawMiniGround(ctx, canvasWidth, canvasHeight, groundOffset, scaleX) {
+            const groundY = canvasHeight - 20; // 相对于150高度的地面位置
+
+            // 绘制地面基础
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, groundY, canvasWidth, 20);
+
+            // 绘制地面纹理
+            ctx.fillStyle = '#32CD32';
+            const grassSpacing = 20 * scaleX;
+            for (let x = -(groundOffset * scaleX) % grassSpacing; x < canvasWidth; x += grassSpacing) {
+                ctx.fillRect(x, groundY, 2, 20);
+                // 添加小草效果
+                ctx.fillRect(x + 5, groundY, 1, 15);
+                ctx.fillRect(x + 10, groundY, 1, 18);
+                ctx.fillRect(x + 15, groundY, 1, 12);
+            }
+
+            // 绘制地面阴影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, groundY, canvasWidth, 3);
+        }
+
+        // 绘制迷你玩家
+        function drawMiniPlayer(ctx, playerState, scaleX, scaleY) {
+            const x = playerState.x * scaleX;
+            const y = playerState.y * scaleY;
+            const width = 36; // 放大到原来的三倍 (12 * 3)
+            const height = 36; // 放大到原来的三倍 (12 * 3)
+
+            // 绘制玩家阴影（放大）
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(x + 3, y + height - 6, width, 9);
+
+            // 尝试使用加载的玩家图片
+            if (typeof player !== 'undefined' && player.image && player.imageLoaded) {
+                try {
+                    ctx.drawImage(player.image, x, y, width, height);
+                } catch (error) {
+                    // 如果图片绘制失败，使用默认绘制
+                    drawDefaultMiniPlayer(ctx, x, y, width, height, playerState);
+                }
+            } else {
+                // 使用默认绘制
+                drawDefaultMiniPlayer(ctx, x, y, width, height, playerState);
+            }
+
+            // 如果在跳跃，添加跳跃特效
+            if (playerState.j) {
+                // 跳跃光环（放大）
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(x - 6, y - 12, width + 12, 6);
+
+                // 跳跃粒子效果（增加数量和大小）
+                ctx.fillStyle = '#FFA500';
+                for (let i = 0; i < 6; i++) {
+                    const particleX = x + Math.random() * width;
+                    const particleY = y + height + Math.random() * 15;
+                    ctx.fillRect(particleX, particleY, 3, 3);
+                }
+            }
+
+            // 如果速度较快，添加移动线条
+            if (playerState.vY !== 0) {
+                ctx.strokeStyle = 'rgba(255, 107, 107, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x - 9, y + height/2);
+                ctx.lineTo(x, y + height/2);
+                ctx.stroke();
+            }
+        }
+
+        // 默认的迷你玩家绘制
+        function drawDefaultMiniPlayer(ctx, x, y, width, height, playerState) {
+            // 绘制玩家身体
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(x, y, width, height);
+
+            // 绘制玩家头部（放大）
+            ctx.fillStyle = '#FF8E8E';
+            ctx.fillRect(x + 6, y, width - 12, 12);
+
+            // 绘制眼睛（放大）
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 9, y + 3, 3, 3);
+            ctx.fillRect(x + width - 12, y + 3, 3, 3);
+
+            // 绘制手臂（放大）
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(x - 3, y + 12, 6, 12);
+            ctx.fillRect(x + width - 3, y + 12, 6, 12);
+
+            // 绘制腿部（放大）
+            ctx.fillRect(x + 6, y + height - 6, 9, 6);
+            ctx.fillRect(x + width - 15, y + height - 6, 9, 6);
+        }
+
+        // 绘制迷你障碍物
+        function drawMiniObstacle(ctx, obstacle, scaleX, scaleY) {
+            const x = obstacle.x * scaleX;
+            const y = obstacle.y * scaleY;
+            const width = obstacle.w * scaleX;
+            const height = obstacle.h * scaleY;
+
+            // 绘制阴影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(x + 1, y + height - 1, width, 2);
+
+            switch(obstacle.t) {
+                case 0: // 栏杆
+                    drawMiniBarrier(ctx, x, y, width, height);
+                    break;
+                case 1: // 石头
+                    drawMiniRock(ctx, x, y, width, height);
+                    break;
+                case 2: // 树
+                    drawMiniTree(ctx, x, y, width, height);
+                    break;
+                case 3: // 房子
+                    drawMiniHouse(ctx, x, y, width, height);
+                    break;
+                default:
+                    // 默认障碍物
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(x, y, width, height);
+            }
+        }
+
+        // 绘制栏杆
+        function drawMiniBarrier(ctx, x, y, width, height) {
+            // 栏杆柱子
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x, y, 2, height);
+            ctx.fillRect(x + width - 2, y, 2, height);
+
+            // 栏杆横条
+            ctx.fillStyle = '#A0522D';
+            ctx.fillRect(x, y + height * 0.3, width, 2);
+            ctx.fillRect(x, y + height * 0.6, width, 2);
+
+            // 金属光泽
+            ctx.fillStyle = '#D2B48C';
+            ctx.fillRect(x, y, 1, height);
+            ctx.fillRect(x + width - 1, y, 1, height);
+        }
+
+        // 绘制石头
+        function drawMiniRock(ctx, x, y, width, height) {
+            // 主体
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(x, y, width, height);
+
+            // 石头纹理
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(x + 1, y + 1, width - 2, 2);
+            ctx.fillRect(x + 2, y + height - 3, width - 4, 2);
+
+            // 高光
+            ctx.fillStyle = '#A9A9A9';
+            ctx.fillRect(x, y, 2, 2);
+
+            // 裂纹
+            ctx.fillStyle = '#2F4F4F';
+            ctx.fillRect(x + width/2, y + 2, 1, height - 4);
+        }
+
+        // 绘制树
+        function drawMiniTree(ctx, x, y, width, height) {
+            // 树干
+            ctx.fillStyle = '#8B4513';
+            const trunkWidth = Math.max(2, width * 0.3);
+            const trunkX = x + (width - trunkWidth) / 2;
+            ctx.fillRect(trunkX, y + height * 0.6, trunkWidth, height * 0.4);
+
+            // 树叶
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(x, y, width, height * 0.7);
+
+            // 树叶层次
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(x + 1, y + 1, width - 2, height * 0.3);
+
+            // 树干纹理
+            ctx.fillStyle = '#A0522D';
+            ctx.fillRect(trunkX, y + height * 0.7, 1, height * 0.3);
+        }
+
+        // 绘制房子
+        function drawMiniHouse(ctx, x, y, width, height) {
+            // 房子主体
+            ctx.fillStyle = '#CD853F';
+            ctx.fillRect(x, y + height * 0.3, width, height * 0.7);
+
+            // 屋顶
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(x - 1, y, width + 2, height * 0.4);
+
+            // 门
+            ctx.fillStyle = '#654321';
+            const doorWidth = Math.max(2, width * 0.3);
+            ctx.fillRect(x + (width - doorWidth) / 2, y + height * 0.5, doorWidth, height * 0.5);
+
+            // 窗户
+            ctx.fillStyle = '#87CEEB';
+            const windowSize = Math.max(1, width * 0.15);
+            ctx.fillRect(x + 2, y + height * 0.4, windowSize, windowSize);
+            ctx.fillRect(x + width - windowSize - 2, y + height * 0.4, windowSize, windowSize);
+
+            // 屋顶高光
+            ctx.fillStyle = '#DC143C';
+            ctx.fillRect(x, y, width, 2);
+        }
+
+        // 绘制迷你道具
+        function drawMiniPowerup(ctx, powerup, scaleX, scaleY) {
+            const x = powerup.x * scaleX;
+            const y = powerup.y * scaleY;
+            const size = 8; // 固定的道具大小
+            const centerX = x + size/2;
+            const centerY = y + size/2;
+            const radius = size/2;
+
+            // 绘制金币阴影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.arc(centerX + 1, centerY + 1, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 尝试使用加载的金币图片
+            if (typeof coinImage !== 'undefined' && coinImage.image && coinImage.imageLoaded) {
+                try {
+                    ctx.drawImage(coinImage.image, x, y, size, size);
+                } catch (error) {
+                    // 如果图片绘制失败，使用默认绘制
+                    drawDefaultMiniCoin(ctx, centerX, centerY, radius);
+                }
+            } else {
+                // 使用默认绘制
+                drawDefaultMiniCoin(ctx, centerX, centerY, radius);
+            }
+
+            // 添加闪烁效果（基于时间的简单动画）
+            const time = Date.now() * 0.01;
+            const sparkle = Math.sin(time) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(255, 255, 255, ${sparkle * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 默认的迷你金币绘制
+        function drawDefaultMiniCoin(ctx, centerX, centerY, radius) {
+            // 绘制金币主体
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 绘制金币内圈
+            ctx.fillStyle = '#FFA500';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 绘制金币中心
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 绘制高光
+            ctx.fillStyle = '#FFFF99';
+            ctx.beginPath();
+            ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 绘制金币边缘
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 绘制迷你云朵
+        function drawMiniClouds(ctx, canvasWidth, canvasHeight, scaleX) {
+            // 绘制几朵简单的云朵作为背景
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+
+            // 云朵1
+            drawMiniCloud(ctx, canvasWidth * 0.2, canvasHeight * 0.2, 15 * scaleX);
+
+            // 云朵2
+            drawMiniCloud(ctx, canvasWidth * 0.7, canvasHeight * 0.15, 12 * scaleX);
+
+            // 云朵3
+            drawMiniCloud(ctx, canvasWidth * 0.5, canvasHeight * 0.25, 10 * scaleX);
+        }
+
+        // 绘制单个云朵
+        function drawMiniCloud(ctx, x, y, size) {
+            ctx.beginPath();
+            // 云朵主体
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.8, y, size * 0.8, 0, Math.PI * 2);
+            ctx.arc(x + size * 1.6, y, size, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.8, y - size * 0.5, size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 绘制迷你UI元素
+        function drawMiniUI(ctx, canvasWidth, canvasHeight, gameState) {
+            // 绘制分数显示
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(5, 5, 60, 15);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '10px Arial';
+            ctx.fillText(`分数: ${gameState.s || 0}`, 8, 15);
+
+            // 绘制速度指示器
+            if (gameState.gs > 3) {
+                ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+                ctx.fillRect(canvasWidth - 25, 5, 20, 3);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '8px Arial';
+                ctx.fillText('快', canvasWidth - 22, 14);
+            }
+
+            // 绘制无敌状态指示
+            if (gameState.i) {
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+                ctx.fillRect(canvasWidth - 50, 5, 20, 15);
+                ctx.fillStyle = '#000000';
+                ctx.font = '8px Arial';
+                ctx.fillText('无敌', canvasWidth - 47, 15);
+            }
+
+            // 绘制跳跃状态指示
+            if (gameState.p && gameState.p.j) {
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
+                ctx.fillRect(5, canvasHeight - 20, 30, 15);
+                ctx.fillStyle = '#000000';
+                ctx.font = '8px Arial';
+                ctx.fillText('跳跃', 8, canvasHeight - 10);
+            }
+
+            // 绘制游戏状态指示
+            if (!gameState.r) {
+                // 游戏暂停或结束
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+                ctx.fillRect(canvasWidth/2 - 25, canvasHeight/2 - 10, 50, 20);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂停', canvasWidth/2, canvasHeight/2 + 2);
+                ctx.textAlign = 'left'; // 重置对齐
+            }
+        }
+
+        // 显示空排行榜（仅在未连接时）
+        function showEmptyLeaderboard() {
+            updateLeaderboardDisplay([]);
+            if (leaderboardContentElement) {
+                leaderboardContentElement.innerHTML = '<div class="no-data">请连接到MultiSYNQ以查看排行榜</div>';
+            }
+            if (lastUpdatedElement) {
+                lastUpdatedElement.textContent = '等待连接到MultiSYNQ...';
+            }
+        }
+
+        // 加载玩家图片
+        function loadPlayerImage() {
+            player.image = new Image();
+            player.image.onload = function () {
+                player.imageLoaded = true;
+                console.log('玩家图片加载成功');
+            };
+            player.image.onerror = function () {
+                console.log('玩家图片加载失败，使用默认绘制');
+                player.imageLoaded = false;
+            };
+            // 你可以将这里的路径改为你的PNG图片路径
+            player.image.src = 'horse1.png'; // 请确保这个文件存在于同一目录下
+        }
+
+        // 加载金币图片
+        function loadCoinImage() {
+            coinImage.image = new Image();
+            coinImage.image.onload = function () {
+                coinImage.imageLoaded = true;
+                console.log('金币图片加载成功');
+            };
+            coinImage.image.onerror = function () {
+                console.log('金币图片加载失败，使用默认绘制');
+                coinImage.imageLoaded = false;
+            };
+            // 你可以将这里的路径改为你的JPG图片路径
+            coinImage.image.src = 'mon.png'; // 请确保这个文件存在于同一目录下
+        }
+
+        // 加载最高得分
+        function loadHighScore() {
+            const savedHighScore = localStorage.getItem('jumpGameHighScore');
+            if (savedHighScore) {
+                highScore = parseInt(savedHighScore);
+            }
+            updateHighScoreDisplay();
+        }
+
+        // 保存最高得分
+        function saveHighScore() {
+            localStorage.setItem('jumpGameHighScore', highScore.toString());
+        }
+
+        // 更新最高得分显示
+        function updateHighScoreDisplay() {
+            highScoreElement.textContent = `最高得分: ${highScore}`;
+        }
+
+        // 检查并更新最高得分
+        function checkHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                saveHighScore();
+                updateHighScoreDisplay();
+                return true; // 返回true表示创造了新纪录
+            }
+            return false;
+        }
+
+        // 障碍物数组
+        let obstacles = [];
+
+        // 云朵数组
+        let clouds = [];
+
+        // 道具数组
+        let powerups = [];
+
+        // 无敌状态
+        let invincible = false;
+        let invincibleTime = 0;
+        const INVINCIBLE_DURATION = 600; // 10秒 (60fps * 10)
+
+        // 地面滚动偏移
+        let groundOffset = 0;
+
+        // 初始化云朵
+        function initClouds() {
+            for (let i = 0; i < 5; i++) {
+                clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * 100 + 20,
+                    width: 60 + Math.random() * 40,
+                    height: 30 + Math.random() * 20,
+                    speed: 0.5 + Math.random() * 0.5
+                });
+            }
+        }
+
+        // 绘制玩家角色
+        function drawPlayer() {
+            // 绘制玩家阴影
+            drawPlayerShadow();
+
+            // 绘制速度线条（在玩家后面）
+            drawPlayerSpeedLines();
+
+            if (player.imageLoaded && player.image) {
+                // 使用PNG图片绘制玩家
+                ctx.save();
+
+                // 无敌状态下添加闪烁效果
+                if (invincible && Math.floor(frameCount / 5) % 2 === 0) {
+                    ctx.globalAlpha = 0.5; // 半透明闪烁效果
+                    ctx.filter = 'hue-rotate(180deg)'; // 色调变化
+                }
+
+                // 绘制玩家图片
+                ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
+
+                ctx.restore();
+            } else {
+                // 图片未加载时使用原来的像素化绘制方式
+                // 无敌状态下角色闪烁
+                if (invincible && Math.floor(frameCount / 5) % 2 === 0) {
+                    ctx.fillStyle = '#FFB6C1'; // 粉色闪烁
+                } else {
+                    ctx.fillStyle = player.color;
+                }
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+
+                // 绘制简单的像素眼睛
+                ctx.fillStyle = '#000';
+                ctx.fillRect(player.x + 8, player.y + 8, 4, 4);
+                ctx.fillRect(player.x + 20, player.y + 8, 4, 4);
+
+                // 绘制像素嘴巴
+                ctx.fillRect(player.x + 12, player.y + 20, 8, 2);
+            }
+
+            // 绘制跳跃特效（在玩家前面）
+            drawPlayerJumpEffects();
+
+            // 绘制无敌状态的五角星
+            if (invincible) {
+                drawInvincibleStar();
+            }
+        }
+
+        // 绘制玩家阴影
+        function drawPlayerShadow() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(player.x + 3, player.y + player.height - 2, player.width, 6);
+        }
+
+        // 绘制玩家速度线条
+        function drawPlayerSpeedLines() {
+            // 只在移动时显示速度线条
+            if (Math.abs(player.velocityY) > 1 || gameSpeed > BASE_GAME_SPEED) {
+                ctx.strokeStyle = 'rgba(255, 107, 107, 0.6)';
+                ctx.lineWidth = 2;
+
+                // 绘制多条速度线
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    const lineY = player.y + player.height/2 + (i - 1) * 8;
+                    const lineLength = 15 + gameSpeed * 3;
+                    ctx.moveTo(player.x - lineLength - i * 5, lineY);
+                    ctx.lineTo(player.x - i * 5, lineY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // 绘制玩家跳跃特效
+        function drawPlayerJumpEffects() {
+            if (player.isJumping) {
+                // 绘制跳跃光环
+                drawJumpAura();
+
+                // 绘制跳跃粒子
+                drawJumpParticles();
+            }
+        }
+
+        // 绘制跳跃光环
+        function drawJumpAura() {
+            const auraWidth = player.width + 16;
+            const auraHeight = 8;
+            const auraX = player.x - 8;
+            const auraY = player.y - 15;
+
+            // 主光环
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(auraX, auraY, auraWidth, auraHeight);
+
+            // 内层光环
+            ctx.fillStyle = '#FFA500';
+            ctx.fillRect(auraX + 4, auraY + 2, auraWidth - 8, auraHeight - 4);
+
+            // 闪烁效果
+            const time = Date.now() * 0.01;
+            const sparkle = Math.sin(time * 2) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(255, 255, 255, ${sparkle * 0.6})`;
+            ctx.fillRect(auraX + 2, auraY + 1, auraWidth - 4, auraHeight - 2);
+        }
+
+        // 绘制跳跃粒子
+        function drawJumpParticles() {
+            ctx.fillStyle = '#FFA500';
+
+            // 在玩家下方生成粒子
+            for (let i = 0; i < 8; i++) {
+                const particleX = player.x + Math.random() * player.width;
+                const particleY = player.y + player.height + Math.random() * 20;
+                const particleSize = 2 + Math.random() * 3;
+
+                // 添加一些随机性让粒子更自然
+                const offsetX = (Math.random() - 0.5) * 10;
+                const offsetY = Math.random() * 15;
+
+                ctx.fillRect(particleX + offsetX, particleY + offsetY, particleSize, particleSize);
+            }
+
+            // 添加一些上升的粒子
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 4; i++) {
+                const particleX = player.x + Math.random() * player.width;
+                const particleY = player.y - Math.random() * 10;
+                const particleSize = 1 + Math.random() * 2;
+
+                ctx.fillRect(particleX, particleY, particleSize, particleSize);
+            }
+        }
+
+        // 绘制无敌状态的五角星
+        function drawInvincibleStar() {
+            const starX = player.x + player.width / 2;
+            const starY = player.y - 25;
+            const timeLeft = INVINCIBLE_DURATION - invincibleTime;
+
+            // 最后3秒闪烁 (180帧)
+            if (timeLeft <= 180 && Math.floor(frameCount / 10) % 2 === 0) {
+                return; // 跳过绘制，产生闪烁效果
+            }
+
+            // 绘制新的五角星设计
+            ctx.fillStyle = '#FFD700'; // 金色
+            drawStarShape(starX, starY, 8); // 半径8像素的五角星
+        }
+
+        // 绘制标准五角星形状的辅助函数
+        function drawStarShape(centerX, centerY, radius) {
+            // 五角星的5个顶点坐标（像素化处理）
+            const points = [];
+            for (let i = 0; i < 5; i++) {
+                // 外圈顶点
+                const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                const x = Math.round(centerX + radius * Math.cos(angle));
+                const y = Math.round(centerY + radius * Math.sin(angle));
+                points.push({ x, y });
+
+                // 内圈顶点
+                const innerAngle = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+                const innerRadius = radius * 0.4;
+                const innerX = Math.round(centerX + innerRadius * Math.cos(innerAngle));
+                const innerY = Math.round(centerY + innerRadius * Math.sin(innerAngle));
+                points.push({ x: innerX, y: innerY });
+            }
+
+            // 使用像素绘制五角星轮廓和填充
+            // 绘制五角星的主体结构
+            // 顶部尖角
+            ctx.fillRect(centerX - 1, centerY - radius, 3, 3);
+            ctx.fillRect(centerX, centerY - radius - 1, 1, 1);
+
+            // 左上角
+            const leftTopX = Math.round(centerX - radius * 0.95);
+            const leftTopY = Math.round(centerY - radius * 0.31);
+            ctx.fillRect(leftTopX - 1, leftTopY - 1, 3, 3);
+
+            // 右上角
+            const rightTopX = Math.round(centerX + radius * 0.95);
+            const rightTopY = Math.round(centerY - radius * 0.31);
+            ctx.fillRect(rightTopX - 1, rightTopY - 1, 3, 3);
+
+            // 左下角
+            const leftBottomX = Math.round(centerX - radius * 0.59);
+            const leftBottomY = Math.round(centerY + radius * 0.81);
+            ctx.fillRect(leftBottomX - 1, leftBottomY - 1, 3, 3);
+
+            // 右下角
+            const rightBottomX = Math.round(centerX + radius * 0.59);
+            const rightBottomY = Math.round(centerY + radius * 0.81);
+            ctx.fillRect(rightBottomX - 1, rightBottomY - 1, 3, 3);
+
+            // 填充中心区域
+            ctx.fillRect(centerX - 3, centerY - 2, 7, 5);
+            ctx.fillRect(centerX - 2, centerY - 4, 5, 8);
+            ctx.fillRect(centerX - 4, centerY, 9, 3);
+        }
+
+        // 绘制障碍物（多种类型）
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                switch (obstacle.type) {
+                    case 0: // 栏杆
+                        drawFence(obstacle);
+                        break;
+                    case 1: // 石头
+                        drawRock(obstacle);
+                        break;
+                    case 2: // 小树
+                        drawTree(obstacle);
+                        break;
+                    case 3: // 小房子
+                        drawHouse(obstacle);
+                        break;
+                }
+            });
+        }
+
+        // 绘制栏杆
+        function drawFence(obstacle) {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+            // 绘制栏杆横条
+            ctx.fillStyle = '#654321';
+            const barCount = Math.max(1, Math.floor(obstacle.height / 15));
+            const barSpacing = obstacle.height / (barCount + 1);
+
+            for (let i = 0; i < barCount; i++) {
+                const barY = obstacle.y + barSpacing * (i + 1);
+                ctx.fillRect(obstacle.x - 2, barY, obstacle.width + 4, 2);
+            }
+        }
+
+        // 绘制石头（三个椭圆堆成三角形）
+        function drawRock(obstacle) {
+            // 计算三个椭圆的位置和大小
+            const baseWidth = obstacle.width;
+            const baseHeight = obstacle.height;
+
+            // 底部两个椭圆（左右）
+            const bottomLeftX = obstacle.x;
+            const bottomRightX = obstacle.x + baseWidth * 0.6;
+            const bottomY = obstacle.y + baseHeight * 0.5;
+            const bottomWidth = baseWidth * 0.4;
+            const bottomHeight = baseHeight * 0.5;
+
+            // 顶部椭圆（中间）
+            const topX = obstacle.x + baseWidth * 0.25;
+            const topY = obstacle.y;
+            const topWidth = baseWidth * 0.5;
+            const topHeight = baseHeight * 0.6;
+
+            // 绘制底部左椭圆
+            drawEllipse(bottomLeftX, bottomY, bottomWidth, bottomHeight, '#696969');
+
+            // 绘制底部右椭圆
+            drawEllipse(bottomRightX, bottomY, bottomWidth, bottomHeight, '#696969');
+
+            // 绘制顶部椭圆
+            drawEllipse(topX, topY, topWidth, topHeight, '#777777');
+
+            // 添加高光效果
+            ctx.fillStyle = '#888888';
+            // 顶部椭圆高光
+            ctx.fillRect(topX + 2, topY + 2, Math.max(1, topWidth / 4), 2);
+            // 左下椭圆高光
+            ctx.fillRect(bottomLeftX + 1, bottomY + 1, Math.max(1, bottomWidth / 4), 1);
+
+            // 添加阴影效果
+            ctx.fillStyle = '#555555';
+            // 右下椭圆阴影
+            ctx.fillRect(bottomRightX + bottomWidth - 2, bottomY + bottomHeight - 2, 2, 2);
+            // 顶部椭圆右侧阴影
+            ctx.fillRect(topX + topWidth - 1, topY + topHeight - 3, 1, 3);
+        }
+
+        // 辅助函数：绘制椭圆
+        function drawEllipse(x, y, width, height, color) {
+            ctx.fillStyle = color;
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+            const radiusX = width / 2;
+            const radiusY = height / 2;
+
+            // 使用像素逐行绘制椭圆
+            for (let dy = -Math.floor(radiusY); dy <= Math.floor(radiusY); dy++) {
+                const normalizedY = dy / radiusY;
+                const xRange = Math.floor(radiusX * Math.sqrt(Math.max(0, 1 - normalizedY * normalizedY)));
+
+                const currentY = Math.floor(centerY + dy);
+                const startX = Math.floor(centerX - xRange);
+                const endX = Math.floor(centerX + xRange);
+
+                if (currentY >= y && currentY < y + height && xRange > 0) {
+                    ctx.fillRect(Math.max(x, startX), currentY,
+                        Math.min(x + width, endX) - Math.max(x, startX), 1);
+                }
+            }
+        }
+
+        // 绘制小树
+        function drawTree(obstacle) {
+            const trunkWidth = Math.max(3, obstacle.width / 3);
+            const trunkX = obstacle.x + (obstacle.width - trunkWidth) / 2;
+            const crownHeight = obstacle.height * 0.7;
+            const trunkHeight = obstacle.height * 0.3;
+
+            // 树干
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(trunkX, obstacle.y + crownHeight, trunkWidth, trunkHeight);
+
+            // 树冠 (分层绘制)
+            ctx.fillStyle = '#228B22';
+            // 底层
+            ctx.fillRect(obstacle.x, obstacle.y + crownHeight * 0.6, obstacle.width, crownHeight * 0.4);
+            // 中层
+            ctx.fillRect(obstacle.x + 1, obstacle.y + crownHeight * 0.3, obstacle.width - 2, crownHeight * 0.4);
+            // 顶层
+            ctx.fillRect(obstacle.x + 2, obstacle.y, obstacle.width - 4, crownHeight * 0.4);
+
+            // 树叶高光
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(obstacle.x + 1, obstacle.y + 1, obstacle.width - 3, 2);
+        }
+
+        // 绘制小房子
+        function drawHouse(obstacle) {
+            const roofHeight = obstacle.height * 0.4;
+            const wallHeight = obstacle.height * 0.6;
+
+            // 墙体
+            ctx.fillStyle = '#CD853F';
+            ctx.fillRect(obstacle.x, obstacle.y + roofHeight, obstacle.width, wallHeight);
+
+            // 屋顶
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(obstacle.x - 1, obstacle.y + roofHeight, obstacle.width + 2, 3);
+            ctx.fillRect(obstacle.x, obstacle.y + roofHeight - 3, obstacle.width, 3);
+            ctx.fillRect(obstacle.x + 1, obstacle.y, obstacle.width - 2, roofHeight);
+
+            // 门
+            if (obstacle.width >= 8) {
+                ctx.fillStyle = '#654321';
+                const doorWidth = Math.max(2, obstacle.width / 4);
+                const doorX = obstacle.x + (obstacle.width - doorWidth) / 2;
+                ctx.fillRect(doorX, obstacle.y + roofHeight + wallHeight * 0.3, doorWidth, wallHeight * 0.7);
+            }
+
+            // 窗户
+            if (obstacle.width >= 10) {
+                ctx.fillStyle = '#87CEEB';
+                const windowSize = 2;
+                ctx.fillRect(obstacle.x + 2, obstacle.y + roofHeight + 3, windowSize, windowSize);
+                if (obstacle.width >= 12) {
+                    ctx.fillRect(obstacle.x + obstacle.width - 4, obstacle.y + roofHeight + 3, windowSize, windowSize);
+                }
+            }
+        }
+
+        // 绘制云朵
+        function drawClouds() {
+            ctx.fillStyle = '#FFFFFF';
+            clouds.forEach(cloud => {
+                // 绘制像素化云朵
+                ctx.fillRect(cloud.x, cloud.y, cloud.width, cloud.height);
+                ctx.fillRect(cloud.x + 10, cloud.y - 8, cloud.width - 20, 16);
+                ctx.fillRect(cloud.x + 20, cloud.y - 12, cloud.width - 40, 8);
+            });
+        }
+
+        // 绘制道具
+        function drawPowerups() {
+            powerups.forEach(powerup => {
+                if (powerup.type === 'coin') {
+                    drawCoin(powerup);
+                } else if (powerup.type === 'star') {
+                    drawStar(powerup);
+                }
+            });
+        }
+
+        // 绘制金币
+        function drawCoin(coin) {
+            if (coinImage.imageLoaded && coinImage.image) {
+                // 使用JPG图片绘制金币，放大2倍显示
+                ctx.save();
+
+                // 计算放大2倍后的尺寸
+                const scaledWidth = coin.width * 2;
+                const scaledHeight = coin.height * 2;
+
+                // 调整位置使金币居中显示（避免因为放大而偏移）
+                const adjustedX = coin.x - coin.width / 2;
+                const adjustedY = coin.y - coin.height / 2;
+
+                // 添加轻微的浮动效果（可选）
+                const floatOffset = Math.sin(frameCount * 0.1) * 2;
+
+                ctx.drawImage(coinImage.image,
+                    adjustedX,
+                    adjustedY + floatOffset,
+                    scaledWidth,
+                    scaledHeight);
+
+                ctx.restore();
+            } else {
+                // 图片未加载时使用原来的像素化绘制方式，也放大2倍
+                const scaledWidth = coin.width * 2;
+                const scaledHeight = coin.height * 2;
+                const adjustedX = coin.x - coin.width / 2;
+                const adjustedY = coin.y - coin.height / 2;
+
+                ctx.fillStyle = '#FFD700'; // 金色
+                // 外圈（放大2倍）
+                ctx.fillRect(adjustedX + 4, adjustedY, scaledWidth - 8, scaledHeight);
+                ctx.fillRect(adjustedX, adjustedY + 4, scaledWidth, scaledHeight - 8);
+
+                // 内部细节（放大2倍）
+                ctx.fillStyle = '#FFA500'; // 橙色阴影
+                ctx.fillRect(adjustedX + 8, adjustedY + 4, scaledWidth - 16, scaledHeight - 8);
+
+                // 中心符号 ($)（放大2倍）
+                ctx.fillStyle = '#B8860B'; // 深金色
+                ctx.fillRect(adjustedX + scaledWidth / 2 - 2, adjustedY + 4, 4, scaledHeight - 8);
+                ctx.fillRect(adjustedX + 4, adjustedY + scaledHeight / 2 - 2, scaledWidth - 8, 4);
+            }
+        }
+
+        // 绘制五角星道具
+        function drawStar(star) {
+            ctx.fillStyle = '#FF69B4'; // 粉色
+            const centerX = star.x + star.width / 2;
+            const centerY = star.y + star.height / 2;
+
+            // 绘制新的五角星设计 (道具大小为16像素半径)
+            drawStarShape(centerX, centerY, 16);
+        }
+
+        // 绘制滚动地面
+        function drawGround() {
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, GROUND_Y + 32, canvas.width, 28);
+
+            // 绘制草地纹理
+            ctx.fillStyle = '#32CD32';
+            for (let x = -groundOffset % 20; x < canvas.width; x += 20) {
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillRect(x + i * 6, GROUND_Y + 30, 2, 6);
+                }
+            }
+        }
+
+        // 生成新障碍物
+        function spawnObstacle() {
+            // 随机间隔距离 (150-400像素)
+            const randomInterval = (Math.floor(Math.random() * 2051) + 150)*((gameSpeed / BASE_GAME_SPEED-1)/5+1);
+
+            if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - randomInterval) {
+                // 每次只生成1个栏杆
+                // 随机宽度 (9-22.5像素，扩大1.5倍)
+                const width = Math.floor((Math.random() * 10 + 10) * 1.5);
+                // 随机高度 (20-50像素)
+                const height = Math.floor(Math.random() * 31) + 20;
+                // 栏杆底部与地面对齐
+                const y = GROUND_Y + 32 - height;
+
+                // 随机选择障碍物类型 (0: 栏杆, 1: 石头, 2: 小树, 3: 小房子)
+                const obstacleType = Math.floor(Math.random() * 4);
+
+                obstacles.push({
+                    x: canvas.width,
+                    y: y,
+                    width: width,
+                    height: height,
+                    type: obstacleType
+                });
+            }
+        }
+
+        // 生成道具
+        function spawnPowerup() {
+            // 30% 概率生成道具
+            if (Math.random() < 0.05 && (powerups.length === 0 || powerups[powerups.length - 1].x < canvas.width - 200)) {
+                const powerupType = Math.random() < 0.93 ? 'coin' : 'star'; // 90%金币，10%五角星
+                // 五角星大小放大一倍
+                const size = powerupType === 'star' ? 32 : 16;
+                const y = GROUND_Y - Math.random() * 100 - size; // 在空中随机高度
+
+                powerups.push({
+                    x: canvas.width,
+                    y: y,
+                    width: size,
+                    height: size,
+                    type: powerupType
+                });
+            }
+        }
+
+        // 更新游戏物理
+        function updatePhysics() {
+            // 计算当前重力（随游戏速度增加而增加，保持跳跃高度不变但速度更快）
+            const speedMultiplier = gameSpeed / BASE_GAME_SPEED*1.2;
+            const currentGravity = BASE_GRAVITY * speedMultiplier;
+
+            // 更新玩家物理（重力和跳跃）
+            if (player.isJumping || player.y < GROUND_Y) {
+                player.velocityY += currentGravity; // 动态重力加速度
+                player.y += player.velocityY;
+
+                // 着地检测
+                if (player.y >= GROUND_Y) {
+                    player.y = GROUND_Y;
+                    player.velocityY = 0;
+                    player.isJumping = false;
+                }
+            }
+
+            // 更新障碍物位置
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= gameSpeed;
+
+                // 移除屏幕外的障碍物并增加分数
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                    score += 10;
+                    scoreElement.textContent = `得分: ${score}`;
+                }
+            });
+
+            // 更新道具位置
+            powerups.forEach((powerup, index) => {
+                powerup.x -= gameSpeed;
+
+                // 移除屏幕外的道具
+                if (powerup.x + powerup.width < 0) {
+                    powerups.splice(index, 1);
+                }
+            });
+
+            // 更新云朵位置
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x + cloud.width < 0) {
+                    cloud.x = canvas.width + Math.random() * 100;
+                    cloud.y = Math.random() * 100 + 20;
+                }
+            });
+
+            // 更新地面滚动
+            groundOffset += gameSpeed;
+
+            // 更新无敌状态
+            if (invincible) {
+                invincibleTime++;
+                if (invincibleTime >= INVINCIBLE_DURATION) {
+                    invincible = false;
+                    invincibleTime = 0;
+                }
+            }
+
+            // 增加游戏速度
+            if (frameCount % 300 === 0) {
+                gameSpeed += 0.05; // 加快1.5倍 (0.2 * 1.5)
+            }
+        }
+
+        // 碰撞检测系统
+        function checkCollisions() {
+            // 检测障碍物碰撞（只有在非无敌状态下才会游戏结束）
+            if (!invincible) {
+                obstacles.forEach(obstacle => {
+                    // AABB碰撞检测算法
+                    if (player.x < obstacle.x + obstacle.width &&
+                        player.x + player.width > obstacle.x &&
+                        player.y < obstacle.y + obstacle.height &&
+                        player.y + player.height > obstacle.y) {
+                        gameOver();
+                    }
+                });
+            }
+
+            // 检测道具碰撞
+            powerups.forEach((powerup, index) => {
+                let collisionX, collisionY, collisionWidth, collisionHeight;
+
+                if (powerup.type === 'coin') {
+                    // 金币放大2倍后的碰撞区域
+                    collisionWidth = powerup.width * 2;
+                    collisionHeight = powerup.height * 2;
+                    collisionX = powerup.x - powerup.width / 2;
+                    collisionY = powerup.y - powerup.height / 2;
+                } else {
+                    // 其他道具使用原来的碰撞区域
+                    collisionX = powerup.x;
+                    collisionY = powerup.y;
+                    collisionWidth = powerup.width;
+                    collisionHeight = powerup.height;
+                }
+
+                if (player.x < collisionX + collisionWidth &&
+                    player.x + player.width > collisionX &&
+                    player.y < collisionY + collisionHeight &&
+                    player.y + player.height > collisionY) {
+
+                    // 收集道具
+                    if (powerup.type === 'coin') {
+                        score += 5; // 金币增加50分
+                        scoreElement.textContent = `得分: ${score}`;
+                    } else if (powerup.type === 'star') {
+                        invincible = true;
+                        invincibleTime = 0;
+                    }
+
+                    // 移除已收集的道具
+                    powerups.splice(index, 1);
+                }
+            });
+        }
+
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+
+            // 检查是否创造了新的最高得分
+            const isNewRecord = checkHighScore();
+
+            // 上传分数到MultiSYNQ（无论是否新纪录都上传）
+            uploadScoreToMultiSYNQ(currentPlayerName, score);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#FF4444';
+            ctx.font = '48px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2 - 60);
+
+            // 如果创造了新纪录，显示特殊信息
+            if (isNewRecord) {
+                ctx.fillStyle = '#FFD700';
+                ctx.font = '28px Courier New';
+                ctx.fillText('🎉 新纪录！🎉', canvas.width / 2, canvas.height / 2 - 20);
+            }
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '24px Courier New';
+            ctx.fillText(`最终得分: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+            ctx.fillText(`玩家: ${currentPlayerName}`, canvas.width / 2, canvas.height / 2 + 50);
+            ctx.fillText(`最高得分: ${highScore}`, canvas.width / 2, canvas.height / 2 + 80);
+            ctx.fillText('按 R 键重新开始', canvas.width / 2, canvas.height / 2 + 110);
+            ctx.textAlign = 'left';
+        }
+
+        // 重置游戏
+        function resetGame() {
+            gameRunning = true;
+            score = 0;
+            gameSpeed = 3; // 加快1.5倍 (2 * 1.5)
+            frameCount = 0;
+            groundOffset = 0;
+
+            // 重置玩家状态
+            player.y = GROUND_Y;
+            player.velocityY = 0;
+            player.isJumping = false;
+
+            // 清空障碍物和道具
+            obstacles = [];
+            powerups = [];
+
+            // 重置无敌状态
+            invincible = false;
+            invincibleTime = 0;
+
+            // 重新初始化云朵
+            clouds = [];
+            initClouds();
+
+            // 重置游戏状态上传
+            resetGameStateUpload();
+
+            scoreElement.textContent = `得分: ${score}`;
+        }
+
+        // 玩家跳跃
+        function jump() {
+            if (!player.isJumping && player.y === GROUND_Y) {
+                // 跳跃力度也随游戏速度增加，保持跳跃高度不变
+                const speedMultiplier = gameSpeed / BASE_GAME_SPEED;
+                const adjustedJumpForce = JUMP_FORCE * speedMultiplier*1.1;
+                player.velocityY = adjustedJumpForce; // 动态跳跃初始速度
+                player.isJumping = true;
+            }
+        }
+
+        // 主游戏循环
+        function gameLoop() {
+            if (gameRunning) {
+                // 清空画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 绘制背景渐变
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(0.7, '#98FB98');
+                gradient.addColorStop(1, '#228B22');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 绘制游戏元素
+                drawClouds();
+                drawGround();
+                drawPowerups();
+                drawPlayer();
+                drawObstacles();
+
+                // 更新游戏状态
+                updatePhysics();
+                spawnObstacle();
+                spawnPowerup();
+                checkCollisions();
+
+                // 上传游戏状态到MultiSYNQ（实时数据分享）
+                uploadGameStateToMultiSYNQ();
+
+                frameCount++;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 键盘事件监听
+        document.addEventListener('keydown', (event) => {
+            switch (event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    if (gameRunning) {
+                        jump();
+                    }
+                    break;
+                case 'KeyR':
+                    event.preventDefault();
+                    resetGame();
+                    break;
+            }
+        });
+
+        // 防止空格键滚动页面
+        document.addEventListener('keypress', (event) => {
+            if (event.code === 'Space') {
+                event.preventDefault();
+            }
+        });
+
+        // 游戏初始化
+        async function initGame() {
+            loadPlayerImage(); // 加载玩家图片
+            loadCoinImage(); // 加载金币图片
+            loadHighScore(); // 加载最高得分
+            initClouds();
+            resetGame();
+
+            // 初始化玩家信息显示
+            updatePlayerInfoDisplay();
+
+            // 清理本地存储并显示空排行榜
+            clearLocalStorage();
+            showEmptyLeaderboard();
+
+            // 初始化MultiSYNQ连接
+            await initMultiSYNQ();
+
+            gameLoop();
+        }
+
+        // 清除所有MultiSYNQ数据
+        function clearAllData() {
+            // 显示确认对话框
+            const confirmed = confirm(
+                "⚠️ 确定要清除MultiSYNQ上的所有数据吗？\n\n这将清除：\n" +
+                "• 所有玩家的排行榜记录\n" +
+                "• 所有玩家的游戏状态数据\n" +
+                "• 整个MultiSYNQ会话的数据\n\n" +
+                "⚠️ 注意：这会影响所有连接的玩家！\n" +
+                "此操作不可撤销！"
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            console.log("🗑️ Starting to clear all MultiSYNQ data...");
+
+            if (!isConnected || !multisynqSession || !multisynqSession.view) {
+                alert("❌ 未连接到MultiSYNQ，无法清除数据！\n请先连接到MultiSYNQ。");
+                return;
+            }
+
+            try {
+                // 通过MultiSYNQ Model清除所有数据
+                console.log("📡 Sending clear all data request to MultiSYNQ...");
+
+                // 发送清除所有数据的事件给Model
+                multisynqSession.view.publish(multisynqSession.view.model.sessionId, "clear-all-data", {
+                    timestamp: Date.now(),
+                    requestedBy: currentPlayerName,
+                    action: "clear-all-multisynq-data"
+                });
+
+                console.log("✅ Clear data request sent to MultiSYNQ");
+
+                // 显示成功消息
+                alert("🎉 清除请求已发送！\n\n所有MultiSYNQ数据将被清除。\n请等待几秒钟后刷新页面查看效果。");
+
+                // 延迟后自动刷新页面
+                setTimeout(() => {
+                    if (confirm("数据清除完成！是否刷新页面查看效果？")) {
+                        location.reload();
+                    }
+                }, 3000);
+
+            } catch (error) {
+                console.error("❌ Error clearing MultiSYNQ data:", error);
+                alert("❌ 清除MultiSYNQ数据时发生错误：" + error.message);
+            }
+        }
+
+        // 启动游戏
+        initGame();
+    </script>
+</body>
+
+</html>
